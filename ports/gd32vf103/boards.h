@@ -1,4 +1,4 @@
-/* 
+/*
  * The MIT License (MIT)
  *
  * Copyright (c) 2020 Ha Thach (tinyusb.org) for Adafruit Industries
@@ -26,31 +26,32 @@
 #define BOARDS_H_
 
 #ifdef __cplusplus
- extern "C" {
+extern "C" {
 #endif
 
-#include "gd32vf103.h"
-//#include "stm32f4xx_hal_conf.h"
-
 #include "board.h"
+#include "drv_usb_hw.h"
+#include "drv_usb_dev.h"
+#include "gd32vf103.h"
+#include "gd32vf103_libopt.h"
 
 // Flash Start Address of Application
-#define BOARD_FLASH_APP_START   0x08010000
+#define BOARD_FLASH_APP_START 0x08010000
 
 // Double Reset tap to enter DFU
-#define TINYUF2_DFU_DOUBLE_TAP  1
+#define TINYUF2_DFU_DOUBLE_TAP 1
 
 // Brightness percentage from 1 to 255
 #ifndef NEOPIXEL_BRIGHTNESS
-#define NEOPIXEL_BRIGHTNESS   0x10
+#define NEOPIXEL_BRIGHTNESS 0x10
 #endif
 
 #ifdef LED_PIN
-#define TINYUF2_LED             1
+#define TINYUF2_LED 1
 #endif
 
 #ifdef __cplusplus
- }
+}
 #endif
 
 #endif /* BOARDS_H_ */

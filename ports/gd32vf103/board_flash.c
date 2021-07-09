@@ -135,17 +135,17 @@ void flash_write(uint32_t dst, const uint8_t *src, int len)
 	  TU_LOG1("invalid sector");
 	}
 
-	HAL_FLASH_Unlock();
+	//HAL_FLASH_Unlock();
 
 	if (!erased && !is_blank(addr, size))
 	{
 		TU_LOG1("Erase: %08lX size = %lu\n", addr, size);
 
-		FLASH_Erase_Sector(sector, FLASH_VOLTAGE_RANGE_3);
-		if (FLASH_WaitForLastOperation(HAL_MAX_DELAY) != HAL_OK) {
+	//	FLASH_Erase_Sector(sector, FLASH_VOLTAGE_RANGE_3);
+	/*	if (FLASH_WaitForLastOperation(HAL_MAX_DELAY) != HAL_OK) {
 			TU_LOG1("Waiting on last operation failed");
 			return;
-		};
+		};*/
 
 		if (!is_blank(addr, size))
 		{
@@ -155,14 +155,14 @@ void flash_write(uint32_t dst, const uint8_t *src, int len)
 
 	for (int i = 0; i < len; i += 4)
 	{
-		if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, dst + i, (uint64_t) (*(uint32_t*)(src + i)) ) != HAL_OK) {
+	/*	if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, dst + i, (uint64_t) (*(uint32_t*)(src + i)) ) != HAL_OK) {
 			TU_LOG1("Failed to write flash at address %08lX", dst + i);
 			break;
 		};
 		if (FLASH_WaitForLastOperation(HAL_MAX_DELAY) != HAL_OK) {
 			TU_LOG1("Waiting on last operation failed");
 			return;
-		};
+		};*/
 	}
 
 	if (memcmp((void*)dst, src, len) != 0)

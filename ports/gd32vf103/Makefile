@@ -5,24 +5,27 @@ ST_HAL_DRIVER = lib/st/stm32f4xx_hal_driver
 ST_CMSIS = lib/st/cmsis_device_f4
 NUCLEI_SDK = lib/nuclei-sdk
 GD32VF103_SDK_SOC_COMMON = $(NUCLEI_SDK)/SoC/gd32vf103/Common
+GD32VF103_SDK_DRIVER = $(GD32VF103_SDK_SOC_COMMON)/Source/Drivers
 CMSIS_5 = lib/CMSIS_5
 SKIP_NANOLIB = 1
 
 # List of git submodules that is included as part of the UF2 version
-GIT_SUBMODULES = st/cmsis_device_f4 st/stm32f4xx_hal_driver tinyusb
+GIT_SUBMODULES = nuclei-sdk tinyusb
 
 include ../make.mk
 
 # Port Compiler Flags
 CFLAGS += \
-  -flto \
+  -Og \
+  -gdwarf-4 \
   -march=rv32imac \
   -mabi=ilp32 \
   -mcmodel=medlow \
   -mstrict-align \
   -nostdlib -nostartfiles \
-  -DCFG_TUSB_MCU=OPT_MCU_STM32F4 \
-  -D__riscv_flen=0
+  -DCFG_TUSB_MCU=OPT_MCU_GD32VF103 \
+  -D__riscv_flen=0 \
+	#-flto 
 
 # suppress warning caused by vendor mcu driver
 CFLAGS += -Wno-error=cast-align -Wno-error=unused-parameter
@@ -32,7 +35,12 @@ LD_FILES ?= $(PORT_DIR)/linker/gd32vf103xb.ld
 # Port source
 PORT_SRC_C += \
 	$(addprefix $(CURRENT_PATH)/, $(wildcard *.c)) \
-	$(ST_CMSIS)/Source/Templates/system_stm32f4xx.c \
+	$(GD32VF103_SDK_DRIVER)/gd32vf103_rcu.c \
+	$(GD32VF103_SDK_DRIVER)/gd32vf103_gpio.c \
+	$(GD32VF103_SDK_DRIVER)/Usb/gd32vf103_usb_hw.c
+
+	
+#	$(ST_CMSIS)/Source/Templates/system_stm32f4xx.c \
 	$(ST_HAL_DRIVER)/Src/stm32f4xx_hal.c \
 	$(ST_HAL_DRIVER)/Src/stm32f4xx_hal_cortex.c \
 	$(ST_HAL_DRIVER)/Src/stm32f4xx_hal_rcc.c \
@@ -43,7 +51,7 @@ PORT_SRC_C += \
 
 SRC_C += \
 	$(PORT_SRC_C) \
-	lib/tinyusb/src/portable/st/synopsys/dcd_synopsys.c \
+	lib/tinyusb/src/portable/st/synopsys/dcd_synopsys.c
 
 SRC_S += \
   $(GD32VF103_SDK_SOC_COMMON)/Source/GCC/startup_gd32vf103.S \
@@ -52,7 +60,8 @@ SRC_S += \
 # Port include
 INC += \
 	$(TOP)/$(NUCLEI_SDK)/NMSIS/Core/Include \
-	$(TOP)/$(GD32VF103_SDK_SOC_COMMON)/Include
+	$(TOP)/$(GD32VF103_SDK_SOC_COMMON)/Include \
+	$(TOP)/$(GD32VF103_SDK_SOC_COMMON)/Include/Usb
 
 #	$(TOP)/$(ST_CMSIS)/Include \
 #	$(TOP)/$(ST_HAL_DRIVER)/Inc \

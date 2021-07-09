@@ -25,6 +25,8 @@
 #ifndef BOARD_H_
 #define BOARD_H_
 
+#define HXTAL_VALUE    ((uint32_t)8000000) /*!< value of the external oscillator in Hz */
+
 //--------------------------------------------------------------------+
 // LED
 //--------------------------------------------------------------------+
@@ -66,7 +68,7 @@
 
 #define UF2_PRODUCT_NAME  USB_MANUFACTURER " " USB_PRODUCT
 #define UF2_BOARD_ID      "Sipeed-Longan-Nano"
-#define UF2_VOLUME_LABEL  "Sipeed Longan Nano"
+#define UF2_VOLUME_LABEL  "Longan Nano"
 #define UF2_INDEX_URL     "https://longan.sipeed.com/en/"
 
 #define USB_NO_VBUS_PIN   1
@@ -76,12 +78,11 @@
 //--------------------------------------------------------------------+
 
 #define UART_DEV              USART2
-#define UART_CLOCK_ENABLE     __HAL_RCC_USART2_CLK_ENABLE
-#define UART_CLOCK_DISABLE    __HAL_RCC_USART2_CLK_DISABLE
+/*#define UART_CLOCK_ENABLE     __HAL_RCC_USART2_CLK_ENABLE
+#define UART_CLOCK_DISABLE    __HAL_RCC_USART2_CLK_DISABLE*/
 #define UART_GPIO_PORT        GPIOA
-#define UART_GPIO_AF          GPIO_AF7_USART2
-#define UART_TX_PIN           GPIO_PIN_2
-#define UART_RX_PIN           GPIO_PIN_3
+#define UART_TX_PIN           GPIO_PIN_9
+#define UART_RX_PIN           GPIO_PIN_10
 
 //--------------------------------------------------------------------+
 // RCC Clock
