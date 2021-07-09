@@ -26,7 +26,8 @@ CFLAGS += \
   -mstrict-align \
   -nostdlib -nostartfiles \
   -DCFG_TUSB_MCU=OPT_MCU_GD32VF103 \
-  -D__riscv_flen=0 
+  -DDOWNLOAD_MODE=DOWNLOAD_MODE_FLASHXIP \
+  #-D__riscv_flen=0 
 
 # suppress warning caused by vendor mcu driver
 CFLAGS += -Wno-error=cast-align -Wno-error=unused-parameter
