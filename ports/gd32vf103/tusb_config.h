@@ -41,6 +41,11 @@
 #define CFG_TUSB_RHPORT0_MODE      OPT_MODE_DEVICE
 #define CFG_TUSB_OS                OPT_OS_NONE
 
+// RHPort number used for device can be defined by board.mk, default to port 0
+#ifndef BOARD_DEVICE_RHPORT_NUM
+  #define BOARD_DEVICE_RHPORT_NUM     0
+#endif
+
 // can be defined by compiler in DEBUG build
 #ifndef CFG_TUSB_DEBUG
   #define CFG_TUSB_DEBUG           0
@@ -77,15 +82,10 @@
 #define CFG_TUD_VENDOR           0
 
 // MSC Buffer size of Device Mass storage
-#define CFG_TUD_MSC_BUFSIZE      4096
+#define CFG_TUD_MSC_BUFSIZE      512
 
 // HID buffer size Should be sufficient to hold ID (if any) + Data
 #define CFG_TUD_HID_BUFSIZE      64
-
-// Vendor FIFO size of TX and RX
-// If not configured vendor endpoints will not be buffered
-#define CFG_TUD_VENDOR_RX_BUFSIZE 64
-#define CFG_TUD_VENDOR_TX_BUFSIZE 64
 
 #ifdef __cplusplus
  }

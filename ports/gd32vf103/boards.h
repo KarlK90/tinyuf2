@@ -36,7 +36,7 @@ extern "C" {
 #include "gd32vf103_libopt.h"
 
 // Flash Start Address of Application
-#define BOARD_FLASH_APP_START 0x08010000
+#define BOARD_FLASH_APP_START 0x08006000
 
 // Double Reset tap to enter DFU
 #define TINYUF2_DFU_DOUBLE_TAP 1

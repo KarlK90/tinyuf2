@@ -29,9 +29,7 @@
 // MACRO TYPEDEF CONSTANT ENUM DECLARATION
 //--------------------------------------------------------------------+
 
-//#define GD32_UUID ((uint32_t *)0x1FFF7A10)
-#define GD32_UUID ((uint32_t *)0x40022100)
-/*UART_HandleTypeDef UartHandle;*/
+#define GD32_UUID ((uint32_t *)0x1FFFF7E8)
 
 void board_init(void) {
   clock_init();
@@ -60,27 +58,33 @@ void board_init(void) {
 #endif
 
 #if defined(UART_DEV) && CFG_TUSB_DEBUG
-  // UART_CLOCK_ENABLE();
-  /*gpio_init(UART_GPIO_PORT, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, UART_TX_PIN);
-  gpio_init(UART_GPIO_PORT, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ,
-            UART_RX_PIN);*/
-/*
-  GPIO_InitStruct.Pin = UART_TX_PIN | UART_RX_PIN;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  GPIO_InitStruct.Alternate = UART_GPIO_AF;
-  HAL_GPIO_Init(UART_GPIO_PORT, &GPIO_InitStruct);
+  /* enable GPIO TX and RX clock */
+  rcu_periph_clock_enable(GD32_COM_TX_GPIO_CLK);
+  rcu_periph_clock_enable(GD32_COM_RX_GPIO_CLK);
 
-  UartHandle.Instance = UART_DEV;
-  UartHandle.Init.BaudRate = 115200;
-  UartHandle.Init.WordLength = UART_WORDLENGTH_8B;
-  UartHandle.Init.StopBits = UART_STOPBITS_1;
-  UartHandle.Init.Parity = UART_PARITY_NONE;
-  UartHandle.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  UartHandle.Init.Mode = UART_MODE_TX_RX;
-  HAL_UART_Init(&UartHandle);
-  */
+  /* enable USART clock */
+  rcu_periph_clock_enable(GD32_COM_CLK);
+
+  /* connect port to USARTx_Tx */
+  gpio_init(GD32_COM_TX_GPIO_PORT, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ,
+            GD32_COM_TX_PIN);
+
+  /* connect port to USARTx_Rx */
+  gpio_init(GD32_COM_RX_GPIO_PORT, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ,
+            GD32_COM_RX_PIN);
+
+  /* USART configure */
+  usart_deinit(UART_DEV);
+  usart_baudrate_set(UART_DEV, 115200U);
+  usart_word_length_set(UART_DEV, USART_WL_8BIT);
+  usart_stop_bit_set(UART_DEV, USART_STB_1BIT);
+  usart_parity_config(UART_DEV, USART_PM_NONE);
+  usart_hardware_flow_rts_config(UART_DEV, USART_RTS_DISABLE);
+  usart_hardware_flow_cts_config(UART_DEV, USART_CTS_DISABLE);
+  usart_receive_config(UART_DEV, USART_RECEIVE_ENABLE);
+  usart_transmit_config(UART_DEV, USART_TRANSMIT_ENABLE);
+  usart_enable(UART_DEV);
+
 #endif
   /* Disable interrupts during init */
   __disable_irq();
@@ -108,11 +112,11 @@ void board_dfu_init(void) {
   /* USB D+ and D- pins don't need to be configured. */
   /* Configure VBUS Pin */
 #ifndef USB_NO_VBUS_PIN
-  //gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_9);
+  gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_9);
 #endif
 
   /* This for ID line debug */
- // gpio_init(GPIOA, GPIO_MODE_AF_OD, GPIO_OSPEED_50MHZ, GPIO_PIN_10);
+  // gpio_init(GPIOA, GPIO_MODE_AF_OD, GPIO_OSPEED_50MHZ, GPIO_PIN_10);
 
   /* Enable USB OTG clock */
   usb_rcu_config();
@@ -122,7 +126,7 @@ void board_dfu_init(void) {
   rcu_periph_reset_disable(RCU_USBFSRST);
 
   /* Set IRQ priority and trigger */
-  ECLIC_SetLevelIRQ(USBFS_IRQn, 4);
+  ECLIC_SetLevelIRQ(USBFS_IRQn, 15);
   ECLIC_SetTrigIRQ(USBFS_IRQn, ECLIC_POSTIVE_EDGE_TRIGGER);
 
   /* Retrieve otg core registers */
@@ -177,57 +181,49 @@ bool board_app_valid(void) {
 }
 
 void board_app_jump(void) {
-  /*
-  volatile uint32_t const * app_vector = (volatile uint32_t const*)
-BOARD_FLASH_APP_START;
+  volatile uint32_t const *app_vector =
+      (volatile uint32_t const *)BOARD_FLASH_APP_START;
 
 #ifdef BUTTON_PIN
-  HAL_GPIO_DeInit(BUTTON_PORT, BUTTON_PIN);
+  gpio_deinit(BUTTON_PORT);
 #endif
 
 #ifdef LED_PIN
-  HAL_GPIO_DeInit(LED_PORT, LED_PIN);
+  gpio_deinit(LED_PORT);
 #endif
 
 #if NEOPIXEL_NUMBER
-  HAL_GPIO_DeInit(NEOPIXEL_PORT, NEOPIXEL_PIN);
+  gpio_deinit(NEOPIXEL_PORT);
 #endif
 
 #if defined(UART_DEV) && CFG_TUSB_DEBUG
-  HAL_UART_DeInit(&UartHandle);
-  HAL_GPIO_DeInit(UART_GPIO_PORT, UART_TX_PIN | UART_RX_PIN);
-  UART_CLOCK_DISABLE();
+  //HAL_UART_DeInit(&UartHandle);
+  gpio_deinit(UART_GPIO_PORT);
+  //UART_CLOCK_DISABLE();
 #endif
 
-  __HAL_RCC_GPIOA_CLK_DISABLE();
-  __HAL_RCC_GPIOB_CLK_DISABLE();
-  __HAL_RCC_GPIOC_CLK_DISABLE();
-  __HAL_RCC_GPIOD_CLK_DISABLE();
 
-  HAL_RCC_DeInit();
+//  HAL_RCC_DeInit();
 
-  SysTick->CTRL = 0;
-  SysTick->LOAD = 0;
-  SysTick->VAL = 0;
+  //SysTick->CTRL = 0;
+  //SysTick->LOAD = 0;
+  //SysTick->VAL = 0;
 
   // TODO protect bootloader region
- */
   /* switch exception handlers to the application */
-  /*  SCB->VTOR = (uint32_t) BOARD_FLASH_APP_START;
-
-    // Set stack pointer
-    __set_MSP(app_vector[0]);
-
     // Jump to Application Entry
-    asm("bx %0" ::"r"(app_vector[1]));
-    */
+ // asm("jr %0" ::"r"(app_vector[1]));
+
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overread"
+#pragma GCC diagnostic ignored "-Warray-bounds"
 uint8_t board_usb_get_serial(uint8_t serial_id[16]) {
-  uint8_t const len = 12;
-  // memcpy(serial_id, GD32_UUID, len);
-  return len;
+  memcpy(serial_id, GD32_UUID, 12);
+  return 12;
 }
+#pragma GCC diagnostic pop
 
 //--------------------------------------------------------------------+
 // LED pattern
@@ -321,17 +317,19 @@ void board_timer_stop(void) { SysTimer_Stop(); }
 void eclic_mtip_handler(void) { board_timer_handler(); }
 
 int board_uart_write(void const *buf, int len) {
-  /*
 #if defined(UART_DEV) && CFG_TUSB_DEBUG
-  HAL_UART_Transmit(&UartHandle, (uint8_t*) buf, len, 0xffff);
+
+  int txsize = len;
+  while (txsize--) {
+    usart_write(UART_DEV, *(uint8_t *)buf);
+    buf++;
+  }
   return len;
 #else
-  (void) buf; (void) len;
-  (void) UartHandle;
+  (void)buf;
+  (void)len;
   return 0;
 #endif
-*/
-  return 0;
 }
 
 #ifndef TINYUF2_SELF_UPDATE

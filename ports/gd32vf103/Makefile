@@ -14,9 +14,11 @@ GIT_SUBMODULES = nuclei-sdk tinyusb
 
 include ../make.mk
 
+DEBUG = 1
+LOG = 0
+
 # Port Compiler Flags
 CFLAGS += \
-  -Og \
   -gdwarf-4 \
   -march=rv32imac \
   -mabi=ilp32 \
@@ -24,8 +26,7 @@ CFLAGS += \
   -mstrict-align \
   -nostdlib -nostartfiles \
   -DCFG_TUSB_MCU=OPT_MCU_GD32VF103 \
-  -D__riscv_flen=0 \
-	#-flto 
+  -D__riscv_flen=0 
 
 # suppress warning caused by vendor mcu driver
 CFLAGS += -Wno-error=cast-align -Wno-error=unused-parameter
@@ -37,7 +38,16 @@ PORT_SRC_C += \
 	$(addprefix $(CURRENT_PATH)/, $(wildcard *.c)) \
 	$(GD32VF103_SDK_DRIVER)/gd32vf103_rcu.c \
 	$(GD32VF103_SDK_DRIVER)/gd32vf103_gpio.c \
-	$(GD32VF103_SDK_DRIVER)/Usb/gd32vf103_usb_hw.c
+	$(GD32VF103_SDK_DRIVER)/Usb/gd32vf103_usb_hw.c \
+	$(GD32VF103_SDK_DRIVER)/gd32vf103_fmc.c \
+	$(GD32VF103_SDK_DRIVER)/gd32vf103_usart.c \
+	$(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/sbrk.c \
+	$(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/close.c \
+	$(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/isatty.c \
+	$(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/fstat.c \
+	$(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/lseek.c \
+	$(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/read.c \
+
 
 	
 #	$(ST_CMSIS)/Source/Templates/system_stm32f4xx.c \

@@ -54,8 +54,8 @@
 //--------------------------------------------------------------------+
 
 // Flash size of the board
-#define BOARD_FLASH_SIZE  1024
 #define BOARD_FLASH_SECTORS 128
+#define BOARD_FLASH_SIZE (BOARD_FLASH_SECTORS * 1024)
 
 //--------------------------------------------------------------------+
 // USB UF2
@@ -64,10 +64,10 @@
 #define USB_VID           0x239A
 #define USB_PID           0x0069
 #define USB_MANUFACTURER  "GD"
-#define USB_PRODUCT       "Sipeed Longan Nano"
+#define USB_PRODUCT       "LonganNano"
 
 #define UF2_PRODUCT_NAME  USB_MANUFACTURER " " USB_PRODUCT
-#define UF2_BOARD_ID      "Sipeed-Longan-Nano"
+#define UF2_BOARD_ID      "Longan-Nano"
 #define UF2_VOLUME_LABEL  "Longan Nano"
 #define UF2_INDEX_URL     "https://longan.sipeed.com/en/"
 
@@ -77,12 +77,20 @@
 // UART
 //--------------------------------------------------------------------+
 
-#define UART_DEV              USART2
-/*#define UART_CLOCK_ENABLE     __HAL_RCC_USART2_CLK_ENABLE
-#define UART_CLOCK_DISABLE    __HAL_RCC_USART2_CLK_DISABLE*/
+#define UART_DEV              USART0
 #define UART_GPIO_PORT        GPIOA
 #define UART_TX_PIN           GPIO_PIN_9
 #define UART_RX_PIN           GPIO_PIN_10
+
+/* sipeed longan nano board UART com port */
+#define GD32_COM0                        USART0
+#define GD32_COM_CLK                     RCU_USART0
+#define GD32_COM_TX_PIN                  GPIO_PIN_9
+#define GD32_COM_RX_PIN                  GPIO_PIN_10
+#define GD32_COM_TX_GPIO_PORT            GPIOA
+#define GD32_COM_RX_GPIO_PORT            GPIOA
+#define GD32_COM_TX_GPIO_CLK             RCU_GPIOA
+#define GD32_COM_RX_GPIO_CLK             RCU_GPIOA
 
 //--------------------------------------------------------------------+
 // RCC Clock
