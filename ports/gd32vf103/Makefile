@@ -1,12 +1,9 @@
 UF2_FAMILY_ID = 0x57755a57
 CROSS_COMPILE = riscv32-unknown-elf-
 
-ST_HAL_DRIVER = lib/st/stm32f4xx_hal_driver
-ST_CMSIS = lib/st/cmsis_device_f4
 NUCLEI_SDK = lib/nuclei-sdk
 GD32VF103_SDK_SOC_COMMON = $(NUCLEI_SDK)/SoC/gd32vf103/Common
 GD32VF103_SDK_DRIVER = $(GD32VF103_SDK_SOC_COMMON)/Source/Drivers
-CMSIS_5 = lib/CMSIS_5
 SKIP_NANOLIB = 1
 
 # List of git submodules that is included as part of the UF2 version
@@ -49,17 +46,6 @@ PORT_SRC_C += \
 	$(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/lseek.c \
 	$(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/read.c \
 
-
-	
-#	$(ST_CMSIS)/Source/Templates/system_stm32f4xx.c \
-	$(ST_HAL_DRIVER)/Src/stm32f4xx_hal.c \
-	$(ST_HAL_DRIVER)/Src/stm32f4xx_hal_cortex.c \
-	$(ST_HAL_DRIVER)/Src/stm32f4xx_hal_rcc.c \
-	$(ST_HAL_DRIVER)/Src/stm32f4xx_hal_gpio.c \
-	$(ST_HAL_DRIVER)/Src/stm32f4xx_hal_flash.c \
-	$(ST_HAL_DRIVER)/Src/stm32f4xx_hal_flash_ex.c \
-	$(ST_HAL_DRIVER)/Src/stm32f4xx_hal_uart.c
-
 SRC_C += \
 	$(PORT_SRC_C) \
 	lib/tinyusb/src/portable/st/synopsys/dcd_synopsys.c
@@ -73,12 +59,6 @@ INC += \
 	$(TOP)/$(NUCLEI_SDK)/NMSIS/Core/Include \
 	$(TOP)/$(GD32VF103_SDK_SOC_COMMON)/Include \
 	$(TOP)/$(GD32VF103_SDK_SOC_COMMON)/Include/Usb
-
-#	$(TOP)/$(ST_CMSIS)/Include \
-#	$(TOP)/$(ST_HAL_DRIVER)/Inc \
-	
-
-#$(TOP)/$(CMSIS_5)/CMSIS/Core/Include
 
 include ../rules.mk
 
