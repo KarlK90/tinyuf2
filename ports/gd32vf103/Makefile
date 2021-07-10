@@ -23,8 +23,7 @@ CFLAGS += \
   -mstrict-align \
   -nostdlib -nostartfiles \
   -DCFG_TUSB_MCU=OPT_MCU_GD32VF103 \
-  -DDOWNLOAD_MODE=DOWNLOAD_MODE_FLASHXIP \
-  #-D__riscv_flen=0 
+  -DDOWNLOAD_MODE=DOWNLOAD_MODE_FLASHXIP
 
 # suppress warning caused by vendor mcu driver
 CFLAGS += -Wno-error=cast-align -Wno-error=unused-parameter
@@ -61,6 +60,10 @@ INC += \
 	$(TOP)/$(GD32VF103_SDK_SOC_COMMON)/Include/Usb
 
 include ../rules.mk
+
+# for flashing with flash-jlink
+JLINK_IF = jtag
+JLINK_DEVICE = gd32vf103cbt6
 
 # flash target ROM bootloader
 flash-dfu-util: $(BUILD)/$(OUTNAME).bin
