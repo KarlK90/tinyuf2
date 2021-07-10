@@ -27,4 +27,4 @@
 	url = https://github.com/NXPmicro/mcux-sdk.git
 [submodule "lib/nuclei-sdk"]
 	path = lib/nuclei-sdk
-	url = git@github.com:Nuclei-Software/nuclei-sdk.git
+	url = https://github.com/Nuclei-Software/nuclei-sdk.git
