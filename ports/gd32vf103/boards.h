@@ -34,6 +34,7 @@ extern "C" {
 #include "drv_usb_dev.h"
 #include "gd32vf103.h"
 #include "gd32vf103_libopt.h"
+#undef STR
 
 // Flash Start Address of Application
 #define BOARD_FLASH_APP_START 0x08006000

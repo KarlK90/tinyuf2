@@ -180,6 +180,8 @@ bool board_app_valid(void) {
   return true;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
 void board_app_jump(void) {
   volatile uint32_t const *app_vector =
       (volatile uint32_t const *)BOARD_FLASH_APP_START;
@@ -215,6 +217,7 @@ void board_app_jump(void) {
  // asm("jr %0" ::"r"(app_vector[1]));
 
 }
+#pragma GCC diagnostic pop
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstringop-overread"

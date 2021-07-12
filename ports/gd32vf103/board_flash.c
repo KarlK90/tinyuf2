@@ -51,6 +51,8 @@ uint32_t flash_func_sector_size(unsigned sector) {
   return 0;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 static bool is_blank(uint32_t addr, uint32_t size) {
   for (uint32_t i = 0; i < size; i += sizeof(uint32_t)) {
     if (*(uint32_t *)(addr + i) != 0xffffffff) {
@@ -59,26 +61,29 @@ static bool is_blank(uint32_t addr, uint32_t size) {
   }
   return true;
 }
+#pragma GCC diagnostic pop
 
 void flash_write(uint32_t dst, const uint8_t *src, int len) {
-  // // assume sector 0 (bootloader) is same size as sector 1
-  // uint32_t addr = flash_func_sector_size(0) + (APP_LOAD_ADDRESS & 0xfff00000);
-  // uint32_t sector = 0;
-  // int erased = false;
-  // uint32_t size = 0;
+  // assume sector 0 (bootloader) is same size as sector 1
+  uint32_t addr = flash_func_sector_size(0) + (APP_LOAD_ADDRESS & 0xfff00000);
+  uint32_t sector = 0;
+  int erased = false;
+  uint32_t size = 0;
 
-  // for (unsigned i = 0; i < BOARD_FLASH_SECTORS; i++) {
-  //   size = flash_func_sector_size(i);
-  //   if (addr + size > dst) {
-  //     sector = i + 1;
-  //     erased = erasedSectors[i];
-  //     erasedSectors[i] =
-  //         1;  // don't erase anymore - we will continue writing here!
-  //     break;
-  //   }
-  //   addr += size;
-  // }
+  for (unsigned i = 0; i < BOARD_FLASH_SECTORS; i++) {
+    size = flash_func_sector_size(i);
+    if (addr + size > dst) {
+      sector = i + 1;
+      erased = erasedSectors[i];
+      erasedSectors[i] =
+          1;  // don't erase anymore - we will continue writing here!
+      break;
+    }
+    addr += size;
+  }
 
+  (void)erased;
+  (void)sector;
   // if (sector == 0) {
   //   TU_LOG1("invalid sector");
   // }
