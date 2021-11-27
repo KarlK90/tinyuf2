@@ -1,5 +1,5 @@
 UF2_FAMILY_ID = 0x57755a57
-CROSS_COMPILE = riscv32-unknown-elf-
+CROSS_COMPILE ?= riscv32-unknown-elf-
 
 NUCLEI_SDK = lib/nuclei-sdk
 GD32VF103_SDK_SOC_COMMON = $(NUCLEI_SDK)/SoC/gd32vf103/Common
