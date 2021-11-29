@@ -31,28 +31,12 @@
 //
 //--------------------------------------------------------------------+
 
-#ifndef BOARD_FLASH_SECTORS
+#if !defined(BOARD_FLASH_SECTORS)
 #define BOARD_FLASH_SECTORS 128
 #endif
 
 #define BOARD_FLASH_SECTOR_SIZE 1024
 
-//#define BOARD_FIRST_FLASH_SECTOR_TO_ERASE 0
-
-#define APP_LOAD_ADDRESS 0x08010000
-
-static uint8_t erasedSectors[BOARD_FLASH_SECTORS];
-
-uint32_t flash_func_sector_size(unsigned sector) {
-  if (sector < BOARD_FLASH_SECTORS) {
-    return BOARD_FLASH_SECTOR_SIZE;
-  }
-
-  return 0;
-}
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
 static bool is_blank(uint32_t addr, uint32_t size) {
   for (uint32_t i = 0; i < size; i += sizeof(uint32_t)) {
     if (*(uint32_t *)(addr + i) != 0xffffffff) {
@@ -61,62 +45,63 @@ static bool is_blank(uint32_t addr, uint32_t size) {
   }
   return true;
 }
-#pragma GCC diagnostic pop
+
+// Bitfield
+static uint16_t erased_sectors[BOARD_FLASH_SECTORS / 16];
 
 void flash_write(uint32_t dst, const uint8_t *src, int len) {
-  // assume sector 0 (bootloader) is same size as sector 1
-  uint32_t addr = flash_func_sector_size(0) + (APP_LOAD_ADDRESS & 0xfff00000);
+  uint32_t addr = BOARD_FLASH_APP_START;
   uint32_t sector = 0;
-  int erased = false;
-  uint32_t size = 0;
+  bool erased = false;
 
-  for (unsigned i = 0; i < BOARD_FLASH_SECTORS; i++) {
-    size = flash_func_sector_size(i);
-    if (addr + size > dst) {
+  for (uint32_t i = 0; i < BOARD_FLASH_SECTORS; i++) {
+    if (addr + BOARD_FLASH_SECTOR_SIZE > dst) {
       sector = i + 1;
-      erased = erasedSectors[i];
-      erasedSectors[i] =
-          1;  // don't erase anymore - we will continue writing here!
+      uint16_t sector_mask = (uint16_t)(1 << (i % 16));
+      uint32_t sector_index = i / 16;
+      erased = (sector_mask & erased_sectors[sector_index]) != 0;
+      erased_sectors[sector_index] |= sector_mask;
       break;
     }
-    addr += size;
+    addr += BOARD_FLASH_SECTOR_SIZE;
   }
 
-  (void)erased;
-  (void)sector;
-  // if (sector == 0) {
-  //   TU_LOG1("invalid sector");
-  // }
+  if (sector == 0) {
+    TU_LOG1("invalid sector");
+  }
 
-  // fmc_unlock();
+  fmc_unlock();
+  ob_unlock();
+  fmc_flag_clear(FMC_FLAG_END);
+  fmc_flag_clear(FMC_FLAG_WPERR);
+  fmc_flag_clear(FMC_FLAG_PGERR);
 
-  // if (!erased && !is_blank(addr, size)) {
-  //   TU_LOG1("Erase: %08lX size = %lu\n", addr, size);
+  if (!erased && !is_blank(addr, BOARD_FLASH_SECTOR_SIZE)) {
+    TU_LOG1("Erase: %08lX size = %u\n", addr, BOARD_FLASH_SECTOR_SIZE);
 
-  //   if (fmc_page_erase(sector) != FMC_READY) {
-  //     TU_LOG1("Waiting on last operation failed");
-  //     return;
-  //   };
+    for (uint32_t i = 0; i < 1; i++) {
+      if (fmc_page_erase(addr + (i * BOARD_FLASH_SECTOR_SIZE)) != FMC_READY) {
+        TU_LOG1("Waiting on last operation failed\n");
+        return;
+      };
+    }
 
-  //   if (!is_blank(addr, size)) {
-  //     TU_LOG1("failed to erase!");
-  //   }
-  // }
+    if (!is_blank(addr, BOARD_FLASH_SECTOR_SIZE)) {
+      TU_LOG1("failed to erase!\n");
+    }
+  }
 
-  // for (int i = 0; i < len; i += 4) {
-  //  /* if (fmc_word_program(dst + i, (uint64_t)(*(uint32_t *)(src + i))) !=
-  //       FMC_READY) { TU_LOG1("Failed to write flash at
-  //      address %08lX", dst + i); break;
-  //   };
-  //   if (FLASH_WaitForLastOperation(HAL_MAX_DELAY) != HAL_OK) {
-  //     TU_LOG1("Waiting on last operation failed");
-  //     return;
-  //   };*/
-  // }
+  for (int i = 0; i < len; i += sizeof(uint32_t)) {
+    uint32_t data = *((uint32_t *)((void *)(src + i)));
+    if (fmc_word_program(dst + i, data) != FMC_READY) {
+      TU_LOG1("Failed to write flash at address %08lX\n", dst + i);
+      break;
+    };
+  }
 
-  // if (memcmp((void *)dst, src, len) != 0) {
-  //   TU_LOG1("failed to write");
-  // }
+  if (memcmp((void *)dst, src, len) != 0) {
+    TU_LOG1("failed to write\n");
+  }
 }
 
 //--------------------------------------------------------------------+
@@ -127,14 +112,14 @@ void board_flash_init(void) {}
 uint32_t board_flash_size(void) { return BOARD_FLASH_SIZE; }
 
 void board_flash_read(uint32_t addr, void *buffer, uint32_t len) {
+  TU_LOG1("Board Flash Read\n");
   memcpy(buffer, (void *)addr, len);
 }
 
 void board_flash_flush(void) {}
 
-// TODO not working quite yet
 void board_flash_write(uint32_t addr, void const *data, uint32_t len) {
-  // TODO skip matching contents
+  TU_LOG1("Board Flash Write\n");
   flash_write(addr, data, len);
 }
 

@@ -29,14 +29,15 @@
 // MACRO TYPEDEF CONSTANT ENUM DECLARATION
 //--------------------------------------------------------------------+
 
+// According to GD32VF103 user manual clock tree:
+// Systick clock = AHB clock / 4.
+#define TIMER_TICKS ((SystemCoreClock / 4) / 1000)
+
 #define GD32_UUID ((uint32_t *)0x1FFFF7E8)
 
 void board_init(void) {
-  clock_init();
-  SystemCoreClockUpdate();
-
-  // disable systick
-  board_timer_stop();
+  /* Disable interrupts during init */
+  __disable_irq();
 
   rcu_periph_clock_enable(RCU_GPIOA);
   rcu_periph_clock_enable(RCU_GPIOB);
@@ -86,24 +87,6 @@ void board_init(void) {
   usart_enable(UART_DEV);
 
 #endif
-  /* Disable interrupts during init */
-  __disable_irq();
-
-  /* Reset eclic configuration registers */
-  ECLIC->CFG = 0;
-  ECLIC->MTH = 0;
-
-  /* Reset eclic interrupt registers */
-  for (int32_t i = 0; i < SOC_INT_MAX; i++) {
-    ECLIC->CTRL[0].INTIP = 0;
-    ECLIC->CTRL[0].INTIE = 0;
-    ECLIC->CTRL[0].INTATTR = 0;
-    ECLIC->CTRL[0].INTCTRL = 0;
-  }
-
-  /* Set 4 bits for interrupt level and 0 bits for priority */
-  __ECLIC_SetCfgNlbits(4);
-
   /* Enable interrupts globaly */
   __enable_irq();
 }
@@ -111,7 +94,7 @@ void board_init(void) {
 void board_dfu_init(void) {
   /* USB D+ and D- pins don't need to be configured. */
   /* Configure VBUS Pin */
-#ifndef USB_NO_VBUS_PIN
+#if !defined(USB_NO_VBUS_PIN)
   gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_9);
 #endif
 
@@ -125,18 +108,19 @@ void board_dfu_init(void) {
   rcu_periph_reset_enable(RCU_USBFSRST);
   rcu_periph_reset_disable(RCU_USBFSRST);
 
-  /* Set IRQ priority and trigger */
-  ECLIC_SetLevelIRQ(USBFS_IRQn, 15);
-  ECLIC_SetTrigIRQ(USBFS_IRQn, ECLIC_POSTIVE_EDGE_TRIGGER);
+  /* Configure USBFS IRQ */
+  ECLIC_Register_IRQ(USBFS_IRQn, ECLIC_NON_VECTOR_INTERRUPT,
+                     ECLIC_POSTIVE_EDGE_TRIGGER, 3, 0, NULL);
 
   /* Retrieve otg core registers */
   usb_gr *otg_core_regs = (usb_gr *)(USBFS_REG_BASE + USB_REG_OFFSET_CORE);
 
 #ifdef USB_NO_VBUS_PIN
-  /* Disable VBUS sense */
+  /* Disable VBUS sense*/
   otg_core_regs->GCCFG |= GCCFG_VBUSIG | GCCFG_PWRON | GCCFG_VBUSBCEN;
 #else
   /* Enable VBUS sense via pin PA9 */
+  otg_core_regs->GCCFG |= GCCFG_VBUSIG | GCCFG_PWRON | GCCFG_VBUSBCEN;
   otg_core_regs->GCCFG &= ~GCCFG_VBUSIG;
 #endif
 }
@@ -153,8 +137,7 @@ void gd32vf103_reset(void) {
   /* The MTIMER unit of the GD32VF103 doesn't have the MSFRST
    * register to generate a software reset request.
    * BUT instead two undocumented registers in the debug peripheral
-   * that allow issueing a software reset. WHO would need the MSFRST
-   * register anyway? Source:
+   * that allow issueing a software reset.
    * https://github.com/esmil/gd32vf103inator/blob/master/include/gd32vf103/dbg.h
    */
   DBG_KEY = DBG_KEY_UNLOCK;
@@ -166,22 +149,13 @@ void board_reset(void) { gd32vf103_reset(); }
 void board_dfu_complete(void) { gd32vf103_reset(); }
 
 bool board_app_valid(void) {
-  volatile uint32_t const *app_vector =
-      (volatile uint32_t const *)BOARD_FLASH_APP_START;
+  const uint32_t op_code =
+      *(volatile uint32_t const *)BOARD_FLASH_APP_START;
 
-  // 1st word is stack pointer (should be in SRAM region)
-
-  // 2nd word is App entry point (reset)
-  if (app_vector[1] < BOARD_FLASH_APP_START ||
-      app_vector[1] > BOARD_FLASH_APP_START + BOARD_FLASH_SIZE) {
-    return false;
-  }
-
-  return true;
+  // op-code for CSRCI mstatus, 8
+  return op_code == 0x30047073;
 }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-variable"
 void board_app_jump(void) {
   volatile uint32_t const *app_vector =
       (volatile uint32_t const *)BOARD_FLASH_APP_START;
@@ -199,125 +173,51 @@ void board_app_jump(void) {
 #endif
 
 #if defined(UART_DEV) && CFG_TUSB_DEBUG
-  //HAL_UART_DeInit(&UartHandle);
+  usart_deinit(UART_DEV);
   gpio_deinit(UART_GPIO_PORT);
-  //UART_CLOCK_DISABLE();
 #endif
 
-
-//  HAL_RCC_DeInit();
-
-  //SysTick->CTRL = 0;
-  //SysTick->LOAD = 0;
-  //SysTick->VAL = 0;
-
-  // TODO protect bootloader region
-  /* switch exception handlers to the application */
-    // Jump to Application Entry
- // asm("jr %0" ::"r"(app_vector[1]));
-
+  // Jump to Application Entry
+  asm("jr %0" ::"r"(app_vector));
 }
-#pragma GCC diagnostic pop
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstringop-overread"
-#pragma GCC diagnostic ignored "-Warray-bounds"
 uint8_t board_usb_get_serial(uint8_t serial_id[16]) {
-  memcpy(serial_id, GD32_UUID, 12);
-  return 12;
+  uint8_t const len = 12;
+  memcpy(serial_id, GD32_UUID, len);
+  return len;
 }
-#pragma GCC diagnostic pop
 
 //--------------------------------------------------------------------+
 // LED pattern
 //--------------------------------------------------------------------+
 
 void board_led_write(uint32_t state) {
+#if defined(LED_PIN)
   gpio_bit_write(LED_PORT, LED_PIN, state ? LED_STATE_ON : (1 - LED_STATE_ON));
-}
-
-#if NEOPIXEL_NUMBER
-#define MAGIC_800_INT 900000   // ~1.11 us -> 1.2  field
-#define MAGIC_800_T0H 2800000  // ~0.36 us -> 0.44 field
-#define MAGIC_800_T1H 1350000  // ~0.74 us -> 0.84 field
-
-static inline uint8_t apply_percentage(uint8_t brightness) {
-  return (uint8_t)((brightness * NEOPIXEL_BRIGHTNESS) >> 8);
-}
-
-void board_rgb_write(uint8_t const rgb[]) {
-  // neopixel color order is GRB
-  uint8_t const pixels[3] = {apply_percentage(rgb[1]), apply_percentage(rgb[0]),
-                             apply_percentage(rgb[2])};
-  uint32_t const numBytes = 3;
-
-  uint8_t const *p = pixels, *end = p + numBytes;
-  uint8_t pix = *p++, mask = 0x80;
-  uint32_t start = 0;
-  uint32_t cyc = 0;
-
-  // assumes 800_000Hz frequency
-  // Theoretical values here are 800_000 -> 1.25us, 2500000->0.4us,
-  // 1250000->0.8us
-  // TODO: try to get dynamic weighting working again
-  uint32_t const sys_freq = HAL_RCC_GetSysClockFreq();
-  uint32_t const interval = sys_freq / MAGIC_800_INT;
-  uint32_t const t0 = sys_freq / MAGIC_800_T0H;
-  uint32_t const t1 = sys_freq / MAGIC_800_T1H;
-
-  __disable_irq();
-
-  // Enable DWT in debug core. Useable when interrupts disabled, as opposed to
-  // Systick->VAL
-  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
-  DWT->CYCCNT = 0;
-
-  for (;;) {
-    cyc = (pix & mask) ? t1 : t0;
-    start = DWT->CYCCNT;
-
-    HAL_GPIO_WritePin(NEOPIXEL_PORT, NEOPIXEL_PIN, 1);
-    while ((DWT->CYCCNT - start) < cyc)
-      ;
-
-    HAL_GPIO_WritePin(NEOPIXEL_PORT, NEOPIXEL_PIN, 0);
-    while ((DWT->CYCCNT - start) < interval)
-      ;
-
-    if (!(mask >>= 1)) {
-      if (p >= end) break;
-      pix = *p++;
-      mask = 0x80;
-    }
-  }
-
-  __enable_irq();
-}
-
 #else
+  (void)state;
+#endif
+}
 
 void board_rgb_write(uint8_t const rgb[]) { (void)rgb; }
-
-#endif
 
 //--------------------------------------------------------------------+
 // Timer
 //--------------------------------------------------------------------+
 
-void board_timer_start(uint32_t ms) {
-  SysTimer_SetLoadValue(0);
-  SysTimer_SetCompareValue((SystemCoreClock / 1000) * ms);
-  ECLIC_SetLevelIRQ(SysTimer_IRQn, 3);
-  ECLIC_SetTrigIRQ(SysTimer_IRQn, ECLIC_POSTIVE_EDGE_TRIGGER);
-  ECLIC_EnableIRQ(SysTimer_IRQn);
+static uint64_t timer_ticks;
 
-  SysTimer_Start();
+void board_timer_start(uint32_t ms) {
+  timer_ticks = TIMER_TICKS * ms;
+  SysTick_Config(timer_ticks);
 }
 
 void board_timer_stop(void) { SysTimer_Stop(); }
 
-void eclic_mtip_handler(void) { board_timer_handler(); }
+void eclic_mtip_handler(void) {
+  SysTick_Reload(timer_ticks);
+  board_timer_handler();
+}
 
 int board_uart_write(void const *buf, int len) {
 #if defined(UART_DEV) && CFG_TUSB_DEBUG

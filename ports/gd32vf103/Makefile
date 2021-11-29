@@ -1,7 +1,8 @@
-UF2_FAMILY_ID = 0x57755a57
+UF2_FAMILY_ID = 0xDEADBEEF
 CROSS_COMPILE ?= riscv32-unknown-elf-
 
 NUCLEI_SDK = lib/nuclei-sdk
+GD32VF103_SDK_SOC = $(NUCLEI_SDK)/SoC/gd32vf103
 GD32VF103_SDK_SOC_COMMON = $(NUCLEI_SDK)/SoC/gd32vf103/Common
 GD32VF103_SDK_DRIVER = $(GD32VF103_SDK_SOC_COMMON)/Source/Drivers
 SKIP_NANOLIB = 1
@@ -11,22 +12,20 @@ GIT_SUBMODULES = nuclei-sdk tinyusb
 
 include ../make.mk
 
-DEBUG = 1
-LOG = 0
-
 # Port Compiler Flags
 CFLAGS += \
+  -flto \
   -gdwarf-4 \
+  -mcmodel=medany \
   -march=rv32imac \
   -mabi=ilp32 \
-  -mcmodel=medlow \
-  -mstrict-align \
-  -nostdlib -nostartfiles \
+  -nostdlib \
+  -nostartfiles \
   -DCFG_TUSB_MCU=OPT_MCU_GD32VF103 \
   -DDOWNLOAD_MODE=DOWNLOAD_MODE_FLASHXIP
 
 # suppress warning caused by vendor mcu driver
-CFLAGS += -Wno-error=cast-align -Wno-error=unused-parameter
+CFLAGS += -Wno-error=unused-parameter -Wno-stringop-overread
 
 LD_FILES ?= $(PORT_DIR)/linker/gd32vf103xb.ld
 
@@ -43,11 +42,11 @@ PORT_SRC_C += \
 	$(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/isatty.c \
 	$(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/fstat.c \
 	$(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/lseek.c \
-	$(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/read.c \
+	$(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/read.c
 
 SRC_C += \
 	$(PORT_SRC_C) \
-	lib/tinyusb/src/portable/st/synopsys/dcd_synopsys.c
+	lib/tinyusb/src/portable/synopsys/dwc2/dcd_dwc2.c
 
 SRC_S += \
   $(GD32VF103_SDK_SOC_COMMON)/Source/GCC/startup_gd32vf103.S \
@@ -63,7 +62,6 @@ include ../rules.mk
 
 # for flashing with flash-jlink
 JLINK_IF = jtag
-JLINK_DEVICE = gd32vf103cbt6
 
 # flash target ROM bootloader
 flash-dfu-util: $(BUILD)/$(OUTNAME).bin

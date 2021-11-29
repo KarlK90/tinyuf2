@@ -40,8 +40,8 @@ __ROM_SIZE = 0x00020000;
  * <o1> ILM RAM Size (in Bytes) <0x0-0xFFFFFFFF:8>
  * </h>
  */
-/*__ILM_RAM_BASE = 0x80000000;
-__ILM_RAM_SIZE = 0x00010000;*/
+__ILM_RAM_BASE = 0x80000000;
+__ILM_RAM_SIZE = 0x00010000;
 
 /*--------------------- Embedded RAM Configuration ---------------------------
  * <h> RAM Configuration

@@ -22,8 +22,17 @@
  * THE SOFTWARE.
  */
 
+#include "gd32vf103c_longan_nano.h"
+
 #ifndef BOARD_H_
 #define BOARD_H_
+
+// 4 bits for interrupt level, 0 for priority.
+// level 0 = lowest priority, level 15 = highest priority.
+#define __ECLIC_INTCTLBITS 4
+#define __SYSTEM_CLOCK 72000000
+
+#define SOC_DEBUG_UART GD32_COM0
 
 #define HXTAL_VALUE    ((uint32_t)8000000) /*!< value of the external oscillator in Hz */
 
@@ -63,8 +72,8 @@
 
 #define USB_VID           0x239A
 #define USB_PID           0x0069
-#define USB_MANUFACTURER  "GD"
-#define USB_PRODUCT       "LonganNano"
+#define USB_MANUFACTURER "GigaDevice"
+#define USB_PRODUCT "Longan Nano"
 
 #define UF2_PRODUCT_NAME  USB_MANUFACTURER " " USB_PRODUCT
 #define UF2_BOARD_ID      "Longan-Nano"
@@ -77,7 +86,7 @@
 // UART
 //--------------------------------------------------------------------+
 
-#define UART_DEV              USART0
+/* #define UART_DEV              USART0 */
 #define UART_GPIO_PORT        GPIOA
 #define UART_TX_PIN           GPIO_PIN_9
 #define UART_RX_PIN           GPIO_PIN_10
@@ -91,12 +100,5 @@
 #define GD32_COM_RX_GPIO_PORT            GPIOA
 #define GD32_COM_TX_GPIO_CLK             RCU_GPIOA
 #define GD32_COM_RX_GPIO_CLK             RCU_GPIOA
-
-//--------------------------------------------------------------------+
-// RCC Clock
-//--------------------------------------------------------------------+
-static inline void clock_init(void)
-{
-}
 
 #endif
