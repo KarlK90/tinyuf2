@@ -31,14 +31,14 @@
 
 // According to GD32VF103 user manual clock tree:
 // Systick clock = AHB clock / 4.
-#define TIMER_TICKS ((SystemCoreClock / 4) / 1000)
+#define SYSTICK_CLOCK (SystemCoreClock / 4)
+#define TIMER_TICKS (SYSTICK_CLOCK / 1000)
 
 #define GD32_UUID ((uint32_t *)0x1FFFF7E8)
 
 void board_init(void) {
   /* Disable interrupts during init */
   __disable_irq();
-
   rcu_periph_clock_enable(RCU_GPIOA);
   rcu_periph_clock_enable(RCU_GPIOB);
   rcu_periph_clock_enable(RCU_GPIOC);
@@ -55,6 +55,7 @@ void board_init(void) {
 #endif
 
 #if NEOPIXEL_NUMBER
+  __enable_mcycle_counter();
   gpio_init(NEOPIXEL_PORT, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, NEOPIXEL_PIN);
 #endif
 
@@ -149,8 +150,7 @@ void board_reset(void) { gd32vf103_reset(); }
 void board_dfu_complete(void) { gd32vf103_reset(); }
 
 bool board_app_valid(void) {
-  const uint32_t op_code =
-      *(volatile uint32_t const *)BOARD_FLASH_APP_START;
+  const uint32_t op_code = *(volatile uint32_t const *)BOARD_FLASH_APP_START;
 
   // op-code for CSRCI mstatus, 8
   return op_code == 0x30047073;
@@ -199,7 +199,71 @@ void board_led_write(uint32_t state) {
 #endif
 }
 
+#if NEOPIXEL_NUMBER
+
+static inline uint8_t apply_percentage(uint8_t brightness) {
+  return (uint8_t)((brightness * NEOPIXEL_BRIGHTNESS) >> 8);
+}
+
+#define MAGIC_800_INT 900000   // ~1.11 us -> 1.2  field
+#define MAGIC_800_T0H 2800000  // ~0.36 us -> 0.44 field
+#define MAGIC_800_T1H 1350000  // ~0.74 us -> 0.84 field
+
+void board_rgb_write(uint8_t const rgb[]) {
+  // assumes 800_000Hz frequency
+  // Theoretical values here are 800_000 -> 1.25us, 2500000->0.4us,
+  // 1250000->0.8us
+  uint32_t const interval = SystemCoreClock / MAGIC_800_INT;
+  uint32_t const t0 = SystemCoreClock / MAGIC_800_T0H;
+  uint32_t const t1 = SystemCoreClock / MAGIC_800_T1H;
+
+  // neopixel color order is GRB
+  uint8_t const colors[3] = {apply_percentage(rgb[1]), apply_percentage(rgb[0]),
+                             apply_percentage(rgb[2])};
+
+  __disable_irq();
+  uint32_t start;
+  uint32_t cyc;
+
+  __RV_CSR_WRITE(CSR_MCYCLEH, 0);
+  __RV_CSR_WRITE(CSR_MCYCLE, 0);
+
+  for (uint32_t i = 0; i < NEOPIXEL_NUMBER; i++) {
+    uint8_t const *color_pointer = colors;
+    uint8_t const *const color_pointer_end = color_pointer + 3;
+    uint8_t color = *color_pointer++;
+    uint8_t color_mask = 0x80;
+
+    while (true) {
+      cyc = (color & color_mask) ? t1 : t0;
+      start = __RV_CSR_READ(CSR_MCYCLE);
+
+      gpio_bit_set(NEOPIXEL_PORT, NEOPIXEL_PIN);
+      while ((__RV_CSR_READ(CSR_MCYCLE) - start) < cyc)
+        ;
+
+      gpio_bit_reset(NEOPIXEL_PORT, NEOPIXEL_PIN);
+      while ((__RV_CSR_READ(CSR_MCYCLE) - start) < interval)
+        ;
+
+      if (!(color_mask >>= 1)) {
+        if (color_pointer >= color_pointer_end) {
+          break;
+        }
+        color = *color_pointer++;
+        color_mask = 0x80;
+      }
+    }
+  }
+
+  __enable_irq();
+}
+
+#else
+
 void board_rgb_write(uint8_t const rgb[]) { (void)rgb; }
+
+#endif
 
 //--------------------------------------------------------------------+
 // Timer
@@ -222,8 +286,7 @@ void eclic_mtip_handler(void) {
 int board_uart_write(void const *buf, int len) {
 #if defined(UART_DEV) && CFG_TUSB_DEBUG
 
-  int txsize = len;
-  while (txsize--) {
+  while (len--) {
     usart_write(UART_DEV, *(uint8_t *)buf);
     buf++;
   }
