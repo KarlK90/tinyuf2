@@ -1,6 +1,10 @@
-UF2_FAMILY_ID = 0xDEADBEEF
-CROSS_COMPILE ?= riscv32-unknown-elf-
+CROSS_COMPILE ?= riscv64-unknown-elf-
+USE_PICOLIBC ?= 0
 
+ifeq ($(shell $(CROSS_COMPILE)gcc --specs=picolibc.specs -E - 2>/dev/null >/dev/null </dev/null ; echo $$?),0)
+USE_PICOLIBC = 1
+endif
+	
 NUCLEI_SDK = lib/nuclei-sdk
 GD32VF103_SDK_SOC = $(NUCLEI_SDK)/SoC/gd32vf103
 GD32VF103_SDK_SOC_COMMON = $(NUCLEI_SDK)/SoC/gd32vf103/Common
@@ -15,19 +19,23 @@ include ../make.mk
 # Port Compiler Flags
 CFLAGS += \
   -flto \
-  -gdwarf-4 \
   -mcmodel=medany \
   -march=rv32imac \
   -mabi=ilp32 \
+  -msave-restore \
+  -mtune=size \
   -nostdlib \
   -nostartfiles \
   -DCFG_TUSB_MCU=OPT_MCU_GD32VF103 \
   -DDOWNLOAD_MODE=DOWNLOAD_MODE_FLASHXIP
 
+ifeq ($(USE_PICOLIBC), 1)
+CFLAGS += --specs=picolibc.specs
+LD_SCRIPT_FLAG = -T $(TOP)/
+endif
+
 # suppress warning caused by vendor mcu driver
 CFLAGS += -Wno-error=unused-parameter -Wno-stringop-overread
-
-LD_FILES ?= $(PORT_DIR)/linker/gd32vf103xb.ld
 
 # Port source
 PORT_SRC_C += \
@@ -36,13 +44,18 @@ PORT_SRC_C += \
 	$(GD32VF103_SDK_DRIVER)/gd32vf103_gpio.c \
 	$(GD32VF103_SDK_DRIVER)/Usb/gd32vf103_usb_hw.c \
 	$(GD32VF103_SDK_DRIVER)/gd32vf103_fmc.c \
-	$(GD32VF103_SDK_DRIVER)/gd32vf103_usart.c \
-	$(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/sbrk.c \
-	$(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/close.c \
-	$(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/isatty.c \
-	$(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/fstat.c \
-	$(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/lseek.c \
-	$(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/read.c
+	$(GD32VF103_SDK_DRIVER)/gd32vf103_usart.c 
+
+
+ifeq ($(USE_PICOLIBC), 0)
+PORT_SRC_C += \
+	 $(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/sbrk.c \
+	 $(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/close.c \
+	 $(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/isatty.c \
+	 $(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/fstat.c \
+	 $(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/lseek.c \
+	 $(GD32VF103_SDK_SOC_COMMON)/Source/Stubs/read.c
+endif
 
 SRC_C += \
 	$(PORT_SRC_C) \
@@ -58,7 +71,11 @@ INC += \
 	$(TOP)/$(GD32VF103_SDK_SOC_COMMON)/Include \
 	$(TOP)/$(GD32VF103_SDK_SOC_COMMON)/Include/Usb
 
+
 include ../rules.mk
+
+UF2_FAMILY_ID = 0xDEADBEEF
+LD_FILES ?= $(PORT_DIR)/linker/gd32vf103xb.ld
 
 # for flashing with flash-jlink
 JLINK_IF = jtag

@@ -12,7 +12,7 @@ CFLAGS  += $(addprefix -I,$(INC))
 LDFLAGS += $(CFLAGS)
 ASFLAGS += $(CFLAGS)
 
-LD_SCRIPT_FLAG := -Wl,-T,$(TOP)/
+LD_SCRIPT_FLAG ?= -Wl,-T,$(TOP)/
 
 # Verbose mode
 ifeq ("$(V)","1")
