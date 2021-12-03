@@ -135,12 +135,9 @@ void board_dfu_init(void) {
 #define DBG_CMD REG32(DBG + 0x08)
 
 void gd32vf103_reset(void) {
-  /* The MTIMER unit of the GD32VF103 doesn't have the MSFRST
-   * register to generate a software reset request.
-   * BUT instead two undocumented registers in the debug peripheral
-   * that allow issueing a software reset.
-   * https://github.com/esmil/gd32vf103inator/blob/master/include/gd32vf103/dbg.h
-   */
+  /* The MTIMER unit of the GD32VF103 doesn't have the MSFRST register to
+   * generate a software reset request. BUT instead two undocumented registers
+   * in the debug peripheral that allow issueing a software reset. */
   DBG_KEY = DBG_KEY_UNLOCK;
   DBG_CMD = DBG_CMD_RESET;
 }
@@ -152,11 +149,13 @@ void board_dfu_complete(void) { gd32vf103_reset(); }
 bool board_app_valid(void) {
   const uint32_t op_code = *(volatile uint32_t const *)BOARD_FLASH_APP_START;
 
-  // op-code for CSRCI mstatus, 8
+  // op-code for CSRCI mstatus, 8 which disables all interrupts
   return op_code == 0x30047073;
 }
 
 void board_app_jump(void) {
+  __disable_irq();
+
   volatile uint32_t const *app_vector =
       (volatile uint32_t const *)BOARD_FLASH_APP_START;
 
