@@ -74,7 +74,7 @@ INC += \
 
 include ../rules.mk
 
-UF2_FAMILY_ID = 0xDEADBEEF
+UF2_FAMILY_ID = 0x9af03e33
 LD_FILES ?= $(PORT_DIR)/linker/gd32vf103xb.ld
 
 # for flashing with flash-jlink
